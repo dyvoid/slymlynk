@@ -8,8 +8,7 @@ namespace SlymLynk.Views;
 
 public partial class MainWindow : Window
 {
-    private Point _dragStart;
-    private bool _isDragPending;
+    private bool _capturingDrag;
 
     private MainViewModel ViewModel => (MainViewModel)DataContext;
 
@@ -21,68 +20,64 @@ public partial class MainWindow : Window
         MouseMove += Window_MouseMove;
     }
 
-    // --- Click handling ---
+    // --- Mouse capture for drag-out ---
+
+    private void Window_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (ViewModel.IsSourceLoaded)
+        {
+            _capturingDrag = true;
+            // Capture keeps mouse events coming even when cursor leaves the window.
+            Mouse.Capture(this);
+        }
+    }
+
+    private void Window_MouseMove(object sender, MouseEventArgs e)
+    {
+        if (!_capturingDrag) return;
+
+        // Show a link cursor once the user drags outside the window bounds.
+        var pos = e.GetPosition(this);
+        bool outside = pos.X < 0 || pos.Y < 0 || pos.X > ActualWidth || pos.Y > ActualHeight;
+        Mouse.OverrideCursor = outside ? Cursors.Cross : null;
+    }
 
     private void Window_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
-        _isDragPending = false;
+        if (_capturingDrag)
+        {
+            _capturingDrag = false;
+            Mouse.OverrideCursor = null;
+            Mouse.Capture(null);
 
-        // Only fire click if the source-loaded buttons didn't handle it.
+            var pos = e.GetPosition(this);
+            bool releasedOutside = pos.X < 0 || pos.Y < 0 || pos.X > ActualWidth || pos.Y > ActualHeight;
+
+            if (releasedOutside && ViewModel.IsSourceLoaded)
+            {
+                FinishDragOut();
+                return;
+            }
+        }
+
+        // Normal click: not a drag-out, or released inside window.
         if (ViewModel.IsIdle)
             ViewModel.BrowseSourceCommand.Execute(null);
         else if (ViewModel.IsSourceLoaded)
             ViewModel.SaveToDestinationCommand.Execute(null);
     }
 
-    // --- Drag-out handling ---
-
-    private void Window_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    private void FinishDragOut()
     {
-        if (ViewModel.IsSourceLoaded)
-        {
-            _dragStart = e.GetPosition(this);
-            _isDragPending = true;
-        }
-    }
-
-    private void Window_MouseMove(object sender, MouseEventArgs e)
-    {
-        if (!_isDragPending || e.LeftButton != MouseButtonState.Pressed || !ViewModel.IsSourceLoaded)
-            return;
-
-        var current = e.GetPosition(this);
-        var delta = current - _dragStart;
-
-        // Only start drag once the cursor has moved beyond the system drag threshold.
-        if (Math.Abs(delta.X) < SystemParameters.MinimumHorizontalDragDistance &&
-            Math.Abs(delta.Y) < SystemParameters.MinimumVerticalDragDistance)
-            return;
-
-        _isDragPending = false;
-        StartDragOut();
-    }
-
-    private void StartDragOut()
-    {
-        if (ViewModel.SourcePath is not { } sourcePath) return;
-
-        var data = new DataObject(DataFormats.FileDrop, new[] { sourcePath });
-
-        // DoDragDrop blocks until the user releases. GetDropDestinationFolder reads
-        // the cursor position immediately after return to identify the Explorer target.
-        var effect = DragDrop.DoDragDrop(this, data, DragDropEffects.Link | DragDropEffects.Copy);
-
-        if (effect == DragDropEffects.None) return;
-
         var destFolder = DragOutHelper.GetDropDestinationFolder();
         if (destFolder is null)
         {
-            // Drop target wasn't a recognised Explorer window — fall back to save dialog.
+            // Cursor wasn't over an Explorer window — fall back to save dialog.
             ViewModel.SaveToDestinationCommand.Execute(null);
             return;
         }
 
-        var linkName = Path.GetFileName(sourcePath);
+        var linkName = Path.GetFileName(ViewModel.SourcePath!);
         var destPath = Path.Combine(destFolder, linkName);
         ViewModel.CreateLink(destPath);
     }
