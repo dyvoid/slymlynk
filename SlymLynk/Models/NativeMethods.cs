@@ -51,4 +51,23 @@ internal static class NativeMethods
         uint nOutBufferSize,
         out uint lpBytesReturned,
         IntPtr lpOverlapped);
+
+    // --- Drag-out destination detection ---
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct POINT { public int X; public int Y; }
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static extern bool GetCursorPos(out POINT lpPoint);
+
+    [DllImport("user32.dll")]
+    internal static extern IntPtr WindowFromPoint(POINT point);
+
+    /// <summary>GA_ROOT = 2 — returns the root (top-level) ancestor.</summary>
+    [DllImport("user32.dll")]
+    internal static extern IntPtr GetAncestor(IntPtr hwnd, uint gaFlags);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    internal static extern int GetClassName(IntPtr hWnd, System.Text.StringBuilder lpClassName, int nMaxCount);
 }
