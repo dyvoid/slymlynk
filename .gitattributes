@@ -1,0 +1,23 @@
+# Normalize line endings: let git handle conversion, store LF in the repo.
+* text=auto eol=lf
+
+# Common binaries — never normalize, never diff as text.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.gz binary
+
+# .NET / WPF
+*.sln text eol=crlf
+*.csproj text eol=crlf
+*.xaml text eol=crlf
+*.props text eol=crlf
+*.targets text eol=crlf
+*.resx text eol=crlf
+
+# Lock files — mark as generated so diffs are de-emphasized
+packages.lock.json linguist-generated=true
