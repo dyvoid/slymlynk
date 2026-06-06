@@ -15,32 +15,27 @@ public class SymlinkService
     };
 
     /// <summary>Validates and normalises a source path. Throws on invalid input.</summary>
-    /// <returns>The resolved, validated absolute path.</returns>
-    public string ValidateSource(string path)
+    /// <returns>A <see cref="ValidatedSource"/> carrying the resolved path and link type.</returns>
+    public ValidatedSource ValidateSource(string path)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
 
         var full = Path.GetFullPath(path);
         ValidatePathSafety(full);
 
-        if (!File.Exists(full) && !Directory.Exists(full))
+        var isDirectory = Directory.Exists(full);
+        if (!File.Exists(full) && !isDirectory)
             throw new FileNotFoundException($"Source path does not exist: {full}");
 
-        return full;
+        return new ValidatedSource(full, isDirectory);
     }
-
-    /// <summary>Returns true if the source path is a directory; false if it is a file.</summary>
-    public bool IsDirectory(string validatedSourcePath) =>
-        Directory.Exists(validatedSourcePath);
 
     /// <summary>
     /// Creates a junction (for directories) or symbolic link (for files) at
-    /// <paramref name="destinationPath"/> pointing to <paramref name="sourcePath"/>.
-    /// Both paths must already be validated via <see cref="ValidateSource"/>.
+    /// <paramref name="destinationPath"/> pointing to the validated source.
     /// </summary>
-    public void Create(string sourcePath, string destinationPath)
+    public void Create(ValidatedSource source, string destinationPath)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
         ArgumentException.ThrowIfNullOrWhiteSpace(destinationPath);
 
         var dest = Path.GetFullPath(destinationPath);
@@ -49,10 +44,10 @@ public class SymlinkService
         if (File.Exists(dest) || Directory.Exists(dest))
             throw new IOException($"Destination already exists: {dest}");
 
-        if (IsDirectory(sourcePath))
-            CreateJunction(sourcePath, dest);
+        if (source.IsDirectory)
+            CreateJunction(source.Path, dest);
         else
-            CreateSymbolicLink(sourcePath, dest);
+            CreateSymbolicLink(source.Path, dest);
     }
 
     // --- private helpers ---

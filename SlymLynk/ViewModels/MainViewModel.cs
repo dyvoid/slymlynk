@@ -1,8 +1,8 @@
 using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Microsoft.Win32;
 using SlymLynk.Models;
+using SlymLynk.Services;
 
 namespace SlymLynk.ViewModels;
 
@@ -11,6 +11,8 @@ public enum AppState { Idle, SourceLoaded, Error }
 public partial class MainViewModel : ObservableObject
 {
     private readonly SymlinkService _service;
+    private readonly IFileDialogService _dialogs;
+    private readonly IDropTargetResolver _dropTargets;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsIdle))]
@@ -18,7 +20,10 @@ public partial class MainViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsError))]
     private AppState _state = AppState.Idle;
 
-    [ObservableProperty] private string? _sourcePath;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SourcePath))]
+    private ValidatedSource? _source;
+
     [ObservableProperty] private string? _sourceDisplayName;
     [ObservableProperty] private string? _errorMessage;
 
@@ -26,11 +31,17 @@ public partial class MainViewModel : ObservableObject
     public bool IsSourceLoaded => State == AppState.SourceLoaded;
     public bool IsError => State == AppState.Error;
 
-    public MainViewModel() : this(new SymlinkService()) { }
+    /// <summary>The resolved source path, or null when no source is loaded.</summary>
+    public string? SourcePath => Source?.Path;
 
-    public MainViewModel(SymlinkService service)
+    public MainViewModel()
+        : this(new SymlinkService(), new Win32FileDialogService(), new ExplorerDropTargetResolver()) { }
+
+    public MainViewModel(SymlinkService service, IFileDialogService dialogs, IDropTargetResolver dropTargets)
     {
         _service = service;
+        _dialogs = dialogs;
+        _dropTargets = dropTargets;
     }
 
     /// <summary>Accepts a dropped path as the link source.</summary>
@@ -39,8 +50,9 @@ public partial class MainViewModel : ObservableObject
     {
         try
         {
-            SourcePath = _service.ValidateSource(path);
-            SourceDisplayName = Path.GetFileName(SourcePath) is { Length: > 0 } n ? n : SourcePath;
+            var validated = _service.ValidateSource(path);
+            Source = validated;
+            SourceDisplayName = Path.GetFileName(validated.Path) is { Length: > 0 } n ? n : validated.Path;
             State = AppState.SourceLoaded;
             ErrorMessage = null;
         }
@@ -54,44 +66,50 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     public void BrowseSource()
     {
-        var dialog = new OpenFileDialog
-        {
-            Title = "Select source file or folder",
-            CheckFileExists = false,
-            CheckPathExists = true,
-            FileName = "Select folder or file"
-        };
-
-        if (dialog.ShowDialog() == true)
-            AcceptDrop(dialog.FileName);
+        if (_dialogs.PickSource() is { } source)
+            AcceptDrop(source);
     }
 
     /// <summary>Opens a save dialog to choose the destination and creates the link.</summary>
     [RelayCommand(CanExecute = nameof(IsSourceLoaded))]
     public void SaveToDestination()
     {
-        if (SourcePath is null) return;
+        if (Source is not { } source) return;
 
-        var isDir = _service.IsDirectory(SourcePath);
-        var dialog = new SaveFileDialog
-        {
-            Title = "Choose destination for link",
-            FileName = SourceDisplayName,
-            Filter = isDir ? "All files (*)|*" : "All files (*.*)|*.*"
-        };
-
-        if (dialog.ShowDialog() == true && dialog.FileName is { } dest)
+        if (_dialogs.PickDestination(SourceDisplayName, source.IsDirectory) is { } dest)
             CreateLink(dest);
+    }
+
+    /// <summary>
+    /// Completes a drag-out gesture: resolves the folder under the cursor and
+    /// creates the link there, falling back to the destination picker when the
+    /// drop target is not a recognised Explorer location.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(IsSourceLoaded))]
+    public void CompleteDragOut()
+    {
+        if (Source is not { } source) return;
+
+        var destFolder = _dropTargets.ResolveFolderUnderCursor();
+        if (destFolder is null)
+        {
+            // Cursor wasn't over an Explorer window — fall back to the picker.
+            SaveToDestination();
+            return;
+        }
+
+        var linkName = Path.GetFileName(source.Path);
+        CreateLink(Path.Combine(destFolder, linkName));
     }
 
     /// <summary>Creates the link at the given destination path.</summary>
     public void CreateLink(string destinationPath)
     {
-        if (SourcePath is null) return;
+        if (Source is not { } source) return;
 
         try
         {
-            _service.Create(SourcePath, destinationPath);
+            _service.Create(source, destinationPath);
             // Stay in SourceLoaded — user can link to multiple destinations.
         }
         catch (Exception ex)
@@ -104,7 +122,7 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     public void Clear()
     {
-        SourcePath = null;
+        Source = null;
         SourceDisplayName = null;
         ErrorMessage = null;
         State = AppState.Idle;

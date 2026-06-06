@@ -18,19 +18,21 @@ public class SymlinkServiceTests : IDisposable
     // --- ValidateSource ---
 
     [Fact]
-    public void ValidateSource_ExistingFile_ReturnsFullPath()
+    public void ValidateSource_ExistingFile_ReturnsFullPathAsFile()
     {
         var file = CreateTempFile("test.txt");
         var result = _svc.ValidateSource(file);
-        Assert.Equal(Path.GetFullPath(file), result);
+        Assert.Equal(Path.GetFullPath(file), result.Path);
+        Assert.False(result.IsDirectory);
     }
 
     [Fact]
-    public void ValidateSource_ExistingDirectory_ReturnsFullPath()
+    public void ValidateSource_ExistingDirectory_ReturnsFullPathAsDirectory()
     {
         var dir = CreateTempDir("mydir");
         var result = _svc.ValidateSource(dir);
-        Assert.Equal(Path.GetFullPath(dir), result);
+        Assert.Equal(Path.GetFullPath(dir), result.Path);
+        Assert.True(result.IsDirectory);
     }
 
     [Fact]
@@ -62,30 +64,12 @@ public class SymlinkServiceTests : IDisposable
         Assert.Throws<ArgumentException>(() => _svc.ValidateSource(reservedPath));
     }
 
-    // --- IsDirectory ---
-
-    [Fact]
-    public void IsDirectory_File_ReturnsFalse()
-    {
-        var file = CreateTempFile("f.txt");
-        var validated = _svc.ValidateSource(file);
-        Assert.False(_svc.IsDirectory(validated));
-    }
-
-    [Fact]
-    public void IsDirectory_Directory_ReturnsTrue()
-    {
-        var dir = CreateTempDir("d");
-        var validated = _svc.ValidateSource(dir);
-        Assert.True(_svc.IsDirectory(validated));
-    }
-
     // --- Create (junction) ---
 
     [Fact]
     public void Create_Junction_CreatesJunctionAtDestination()
     {
-        var source = CreateTempDir("source");
+        var source = _svc.ValidateSource(CreateTempDir("source"));
         var dest = Path.Combine(_tempDir, "junction_link");
 
         _svc.Create(source, dest);
@@ -96,7 +80,7 @@ public class SymlinkServiceTests : IDisposable
     [Fact]
     public void Create_DestinationAlreadyExists_Throws()
     {
-        var source = CreateTempDir("src2");
+        var source = _svc.ValidateSource(CreateTempDir("src2"));
         var dest = CreateTempDir("existing_dest");
 
         Assert.Throws<IOException>(() => _svc.Create(source, dest));
@@ -105,7 +89,7 @@ public class SymlinkServiceTests : IDisposable
     [Fact]
     public void Create_DestinationIsUncPath_Throws()
     {
-        var source = CreateTempDir("src3");
+        var source = _svc.ValidateSource(CreateTempDir("src3"));
         Assert.Throws<ArgumentException>(() => _svc.Create(source, @"\\server\share\link"));
     }
 
