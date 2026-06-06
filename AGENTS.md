@@ -65,6 +65,11 @@ ops. See [Architecture Overview](docs/architecture/overview.md) for the full pic
 ### Branching
 Short-lived branches only: `task/`, `fix/`, `experiment/`. Details in [Git Strategy](docs/git-strategy.md).
 
+### Merging
+Fast-forward only — no merge commits, no squashing. Rebase onto `main` before merging; never merge
+`main` into your branch. If a fast-forward isn't possible, stop and flag it rather than creating a
+merge commit. Details in [Git Strategy](docs/git-strategy.md).
+
 ### Commits
 One commit per task or prompt session. [Conventional Commits](https://www.conventionalcommits.org).
 Put AI context in the body, not the subject:
