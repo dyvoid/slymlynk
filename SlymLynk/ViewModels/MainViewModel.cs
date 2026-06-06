@@ -1,8 +1,8 @@
 using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Microsoft.Win32;
 using SlymLynk.Models;
+using SlymLynk.Services;
 
 namespace SlymLynk.ViewModels;
 
@@ -11,6 +11,7 @@ public enum AppState { Idle, SourceLoaded, Error }
 public partial class MainViewModel : ObservableObject
 {
     private readonly SymlinkService _service;
+    private readonly IFileDialogService _dialogs;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsIdle))]
@@ -26,11 +27,12 @@ public partial class MainViewModel : ObservableObject
     public bool IsSourceLoaded => State == AppState.SourceLoaded;
     public bool IsError => State == AppState.Error;
 
-    public MainViewModel() : this(new SymlinkService()) { }
+    public MainViewModel() : this(new SymlinkService(), new Win32FileDialogService()) { }
 
-    public MainViewModel(SymlinkService service)
+    public MainViewModel(SymlinkService service, IFileDialogService dialogs)
     {
         _service = service;
+        _dialogs = dialogs;
     }
 
     /// <summary>Accepts a dropped path as the link source.</summary>
@@ -54,16 +56,8 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     public void BrowseSource()
     {
-        var dialog = new OpenFileDialog
-        {
-            Title = "Select source file or folder",
-            CheckFileExists = false,
-            CheckPathExists = true,
-            FileName = "Select folder or file"
-        };
-
-        if (dialog.ShowDialog() == true)
-            AcceptDrop(dialog.FileName);
+        if (_dialogs.PickSource() is { } source)
+            AcceptDrop(source);
     }
 
     /// <summary>Opens a save dialog to choose the destination and creates the link.</summary>
@@ -73,14 +67,7 @@ public partial class MainViewModel : ObservableObject
         if (SourcePath is null) return;
 
         var isDir = _service.IsDirectory(SourcePath);
-        var dialog = new SaveFileDialog
-        {
-            Title = "Choose destination for link",
-            FileName = SourceDisplayName,
-            Filter = isDir ? "All files (*)|*" : "All files (*.*)|*.*"
-        };
-
-        if (dialog.ShowDialog() == true && dialog.FileName is { } dest)
+        if (_dialogs.PickDestination(SourceDisplayName, isDir) is { } dest)
             CreateLink(dest);
     }
 
