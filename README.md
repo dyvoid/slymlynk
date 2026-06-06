@@ -15,7 +15,7 @@ drag-and-drop. The entire interaction fits in a ~300×300 window. No installatio
 |---|---|---|
 | M1 | Functional core | In progress |
 | M2 | Security hardening | Planned |
-| M3 | UI polish | Planned |
+| M3 | UI polish | [Design ready](docs/design/m3-wormhole-ui.md) |
 | M4 | Edge cases & full test coverage | Planned |
 | M5 | Distribution (portable exe + installer + CI release) | Planned |
 
