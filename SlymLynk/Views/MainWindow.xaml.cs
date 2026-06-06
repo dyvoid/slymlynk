@@ -1,7 +1,5 @@
-using System.IO;
 using System.Windows;
 using System.Windows.Input;
-using SlymLynk.Models;
 using SlymLynk.ViewModels;
 
 namespace SlymLynk.Views;
@@ -55,7 +53,7 @@ public partial class MainWindow : Window
 
             if (releasedOutside && ViewModel.IsSourceLoaded)
             {
-                FinishDragOut();
+                ViewModel.CompleteDragOutCommand.Execute(null);
                 return;
             }
         }
@@ -65,21 +63,6 @@ public partial class MainWindow : Window
             ViewModel.BrowseSourceCommand.Execute(null);
         else if (ViewModel.IsSourceLoaded)
             ViewModel.SaveToDestinationCommand.Execute(null);
-    }
-
-    private void FinishDragOut()
-    {
-        var destFolder = DragOutHelper.GetDropDestinationFolder();
-        if (destFolder is null)
-        {
-            // Cursor wasn't over an Explorer window — fall back to save dialog.
-            ViewModel.SaveToDestinationCommand.Execute(null);
-            return;
-        }
-
-        var linkName = Path.GetFileName(ViewModel.SourcePath!);
-        var destPath = Path.Combine(destFolder, linkName);
-        ViewModel.CreateLink(destPath);
     }
 
     // --- Drag-in handling ---

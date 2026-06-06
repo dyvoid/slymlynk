@@ -12,6 +12,7 @@ public partial class MainViewModel : ObservableObject
 {
     private readonly SymlinkService _service;
     private readonly IFileDialogService _dialogs;
+    private readonly IDropTargetResolver _dropTargets;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsIdle))]
@@ -27,12 +28,14 @@ public partial class MainViewModel : ObservableObject
     public bool IsSourceLoaded => State == AppState.SourceLoaded;
     public bool IsError => State == AppState.Error;
 
-    public MainViewModel() : this(new SymlinkService(), new Win32FileDialogService()) { }
+    public MainViewModel()
+        : this(new SymlinkService(), new Win32FileDialogService(), new ExplorerDropTargetResolver()) { }
 
-    public MainViewModel(SymlinkService service, IFileDialogService dialogs)
+    public MainViewModel(SymlinkService service, IFileDialogService dialogs, IDropTargetResolver dropTargets)
     {
         _service = service;
         _dialogs = dialogs;
+        _dropTargets = dropTargets;
     }
 
     /// <summary>Accepts a dropped path as the link source.</summary>
@@ -69,6 +72,28 @@ public partial class MainViewModel : ObservableObject
         var isDir = _service.IsDirectory(SourcePath);
         if (_dialogs.PickDestination(SourceDisplayName, isDir) is { } dest)
             CreateLink(dest);
+    }
+
+    /// <summary>
+    /// Completes a drag-out gesture: resolves the folder under the cursor and
+    /// creates the link there, falling back to the destination picker when the
+    /// drop target is not a recognised Explorer location.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(IsSourceLoaded))]
+    public void CompleteDragOut()
+    {
+        if (SourcePath is null) return;
+
+        var destFolder = _dropTargets.ResolveFolderUnderCursor();
+        if (destFolder is null)
+        {
+            // Cursor wasn't over an Explorer window — fall back to the picker.
+            SaveToDestination();
+            return;
+        }
+
+        var linkName = Path.GetFileName(SourcePath);
+        CreateLink(Path.Combine(destFolder, linkName));
     }
 
     /// <summary>Creates the link at the given destination path.</summary>

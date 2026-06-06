@@ -23,7 +23,7 @@ public class FileDialogServiceTests : IDisposable
     {
         var dir = CreateTempDir("src");
         var dialogs = new FakeFileDialogService { SourceResult = dir };
-        var vm = new MainViewModel(new SymlinkService(), dialogs);
+        var vm = new MainViewModel(new SymlinkService(), dialogs, new FakeDropTargetResolver());
 
         vm.BrowseSourceCommand.Execute(null);
 
@@ -35,7 +35,7 @@ public class FileDialogServiceTests : IDisposable
     public void BrowseSource_DialogCancelled_StaysIdle()
     {
         var dialogs = new FakeFileDialogService { SourceResult = null };
-        var vm = new MainViewModel(new SymlinkService(), dialogs);
+        var vm = new MainViewModel(new SymlinkService(), dialogs, new FakeDropTargetResolver());
 
         vm.BrowseSourceCommand.Execute(null);
 
@@ -51,7 +51,7 @@ public class FileDialogServiceTests : IDisposable
         var source = CreateTempDir("source");
         var dest = Path.Combine(_tempDir, "link");
         var dialogs = new FakeFileDialogService { SourceResult = source, DestinationResult = dest };
-        var vm = new MainViewModel(new SymlinkService(), dialogs);
+        var vm = new MainViewModel(new SymlinkService(), dialogs, new FakeDropTargetResolver());
 
         vm.BrowseSourceCommand.Execute(null);
         vm.SaveToDestinationCommand.Execute(null);
@@ -65,7 +65,7 @@ public class FileDialogServiceTests : IDisposable
     {
         var source = CreateTempDir("source2");
         var dialogs = new FakeFileDialogService { SourceResult = source, DestinationResult = null };
-        var vm = new MainViewModel(new SymlinkService(), dialogs);
+        var vm = new MainViewModel(new SymlinkService(), dialogs, new FakeDropTargetResolver());
 
         vm.BrowseSourceCommand.Execute(null);
         vm.SaveToDestinationCommand.Execute(null);
@@ -79,7 +79,7 @@ public class FileDialogServiceTests : IDisposable
     {
         var source = CreateTempDir("dirsrc");
         var dialogs = new FakeFileDialogService { SourceResult = source, DestinationResult = null };
-        var vm = new MainViewModel(new SymlinkService(), dialogs);
+        var vm = new MainViewModel(new SymlinkService(), dialogs, new FakeDropTargetResolver());
 
         vm.BrowseSourceCommand.Execute(null);
         vm.SaveToDestinationCommand.Execute(null);
@@ -92,22 +92,5 @@ public class FileDialogServiceTests : IDisposable
         var path = Path.Combine(_tempDir, name);
         Directory.CreateDirectory(path);
         return path;
-    }
-
-    private sealed class FakeFileDialogService : IFileDialogService
-    {
-        public string? SourceResult { get; init; }
-        public string? DestinationResult { get; init; }
-        public bool DestinationRequested { get; private set; }
-        public bool LastIsDirectory { get; private set; }
-
-        public string? PickSource() => SourceResult;
-
-        public string? PickDestination(string? suggestedName, bool isDirectory)
-        {
-            DestinationRequested = true;
-            LastIsDirectory = isDirectory;
-            return DestinationResult;
-        }
     }
 }
