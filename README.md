@@ -9,12 +9,12 @@ drag-and-drop. The entire interaction fits in a ~300×300 window. No installatio
 
 ## Status
 
-**M1 in progress** — functional core. Things are working but not polished.
+**M2 in progress** — security hardening. The functional core (M1) is complete.
 
 | Milestone | Description | Status |
 |---|---|---|
-| M1 | Functional core | In progress |
-| M2 | Security hardening | Planned |
+| M1 | Functional core | ✅ Complete |
+| M2 | Security hardening | In progress |
 | M3 | UI polish | [Design ready](docs/design/m3-wormhole-ui.md) |
 | M4 | Edge cases & full test coverage | Planned |
 | M5 | Distribution (portable exe + installer + CI release) | Planned |
@@ -74,4 +74,5 @@ AGENTS.md               Context and instructions for AI agents
 
 - [Architecture Overview](docs/architecture/overview.md)
 - [Architecture Decisions](docs/adr/)
+- [Security Model](SECURITY.md)
 - [Git Strategy](docs/git-strategy.md)
