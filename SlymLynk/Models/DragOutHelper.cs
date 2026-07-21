@@ -34,6 +34,10 @@ internal static class DragOutHelper
         return className.ToString() is "Progman" or "WorkerW";
     }
 
+    // Hard bound on shell window enumeration: the collection is produced by an
+    // out-of-process COM server, so never loop on an unbounded external count.
+    private const int MaxShellWindows = 512;
+
     private static string? QueryShellApplicationForFolder(IntPtr targetHwnd)
     {
         try
@@ -43,7 +47,7 @@ internal static class DragOutHelper
 
             dynamic shell = Activator.CreateInstance(shellType)!;
             dynamic windows = shell.Windows();
-            int count = (int)windows.Count;
+            int count = Math.Min((int)windows.Count, MaxShellWindows);
 
             for (int i = 0; i < count; i++)
             {
@@ -62,10 +66,20 @@ internal static class DragOutHelper
                     if (Uri.TryCreate(url, UriKind.Absolute, out var uri) && uri.IsFile)
                         return uri.LocalPath;
                 }
-                catch { /* window may have closed mid-iteration */ }
+                catch
+                {
+                    // Window may have closed mid-iteration. Swallowing is safe here
+                    // (reviewed for M2): nothing user-controlled crosses this boundary,
+                    // no state is mutated, and failure degrades to "not an Explorer
+                    // window", which the caller handles by falling back to the picker.
+                }
             }
         }
-        catch { /* COM unavailable */ }
+        catch
+        {
+            // COM unavailable (reviewed for M2): same reasoning as above — the null
+            // return routes the user to the save dialog instead of failing silently.
+        }
 
         return null;
     }
