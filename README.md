@@ -3,6 +3,7 @@
 ![Build](https://github.com/dyvoid/slymlynk/actions/workflows/ci.yml/badge.svg)
 ![.NET](https://img.shields.io/badge/.NET-8-512BD4?logo=dotnet)
 ![Windows](https://img.shields.io/badge/Windows-10+-0078D6?logo=windows)
+![License](https://img.shields.io/badge/License-MIT-yellow.svg)
 
 A lightweight, portable Windows desktop utility for creating symbolic links and junctions via
 drag-and-drop. The entire interaction fits in a ~300×300 window. No installation required.
