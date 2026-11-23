@@ -82,14 +82,14 @@ events.
 ```
 SlymLynk/
 ├── Models/
-│   └── SymlinkService.cs
+│   └── SymlinkService.cs   (plus junction, privilege, and path-validation helpers)
 ├── ViewModels/
 │   └── MainViewModel.cs
 ├── Views/
 │   └── MainWindow.xaml
-├── Services/               (future: single-instance enforcement, dialog abstraction)
-├── Assets/                 (M3: drop zone images, icons)
-└── App.xaml
+├── Services/               (file dialog abstraction, Explorer drop-target resolution)
+├── Assets/                 (M3, not yet created: drop zone images, icons)
+└── App.xaml                (single-instance enforcement via named Mutex)
 ```
 
 `CommunityToolkit.MVVM` is used throughout ViewModels for `[ObservableProperty]` and
@@ -100,7 +100,7 @@ SlymLynk/
 - **Windows 10+ only.** WPF, junctions, and symbolic links are all Windows-specific. No
   cross-platform ambitions.
 - **No shell execution.** All filesystem operations use `System.IO` or P/Invoke. This is a hard
-  security constraint, not a preference. See [ADR-003](../adr/0004-no-shell-execution.md).
+  security constraint, not a preference. See [ADR-0004](../adr/0004-no-shell-execution.md).
 - **No destructive operations.** The app creates one thing: a pointer. It never deletes, moves,
   or overwrites.
 - **Single instance.** A second launch focuses the existing window. Enforced via a named Mutex.
