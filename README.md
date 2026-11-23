@@ -38,13 +38,13 @@ Junctions require no elevation. File symlinks require Windows Developer Mode or 
 
 ### Run (portable)
 
-Download the latest release from the [Releases page](#) and run `SlymLynk.exe` directly. No
-installation required.
+No release has been published yet; packaged builds arrive with M5 (Distribution). Until then,
+build from source.
 
 ### Build from source
 
 ```
-git clone https://github.com/your-org/slymlynk
+git clone https://github.com/dyvoid/slymlynk
 cd slymlynk/SlymLynk
 dotnet build
 dotnet run
@@ -64,7 +64,7 @@ SlymLynk/               Main WPF application
   Models/               SymlinkService — filesystem logic and path validation
   ViewModels/           MainViewModel — UI state and commands
   Views/                MainWindow.xaml — bindings and visual states
-  Assets/               Icons and image assets
+  Services/             File dialogs and Explorer drop-target resolution
 SlymLynk.Tests/         Unit and integration tests
 docs/                   Architecture, decisions, and guides
 .prompts/               Versioned prompts that generated significant code
